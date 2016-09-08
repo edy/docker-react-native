@@ -2,10 +2,10 @@ FROM openjdk:8-jdk
 MAINTAINER Pedro Maia <pedro.maia@ezdelivery.co>
 
 RUN dpkg --add-architecture i386 && \
-    apt-get update -y && \
-    apt-get install -y \
+    apt-get update -y
+
+RUN apt-get install -y \
         expect \
-        lib32bz2-dev \
         lib32gcc1 \
         lib32gomp1 \
         lib32ncurses5 \
@@ -15,8 +15,9 @@ RUN dpkg --add-architecture i386 && \
         libc6-i386 \
         libc6:i386 \
         libncurses5:i386 \
-        libstdc++6:i386 && \
-    rm -rf /var/lib/apt/lists/* && \
+        libstdc++6:i386
+
+RUN rm -rf /var/lib/apt/lists/* && \
     apt-get autoremove -y && \
     apt-get clean
 
