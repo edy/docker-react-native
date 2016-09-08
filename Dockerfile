@@ -15,7 +15,8 @@ RUN apt-get install -y \
         libc6-i386 \
         libc6:i386 \
         libncurses5:i386 \
-        libstdc++6:i386
+        libstdc++6:i386 \
+        proguard
 
 RUN rm -rf /var/lib/apt/lists/* && \
     apt-get autoremove -y && \
