@@ -1,10 +1,18 @@
 FROM openjdk:8-jdk
-MAINTAINER Pedro Maia <pedro.maia@ezdelivery.co>
+
+ENV ANDROID_SDK_FILENAME android-sdk_r24.4.1-linux.tgz
+ENV ANDROID_SDK_URL http://dl.google.com/android/${ANDROID_SDK_FILENAME}
+ENV ANDROID_API_LEVELS android-24,android-23
+ENV ANDROID_BUILD_TOOLS_VERSION 23.0.3
+ENV ANDROID_HOME /usr/local/opt/android-sdk-linux
+ENV PATH ${PATH}:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools
+
+ENV NPM_CONFIG_LOGLEVEL info
+ENV NODE_VERSION 6.9.1
 
 RUN dpkg --add-architecture i386 && \
-    apt-get update -y
-
-RUN apt-get install -y \
+    apt-get update -y && \
+    apt-get install -y \
         expect \
         lib32gcc1 \
         lib32gomp1 \
@@ -16,30 +24,23 @@ RUN apt-get install -y \
         libc6:i386 \
         libncurses5:i386 \
         libstdc++6:i386 \
-        proguard
-
-RUN rm -rf /var/lib/apt/lists/* && \
+        proguard \
+    && \
+    rm -rf /var/lib/apt/lists/* && \
     apt-get autoremove -y && \
     apt-get clean
 
-ENV ANDROID_SDK_FILENAME android-sdk_r24.4.1-linux.tgz
-ENV ANDROID_SDK_URL http://dl.google.com/android/${ANDROID_SDK_FILENAME}
-ENV ANDROID_API_LEVELS android-24,android-23,android-22,android-21,android-20
-ENV ANDROID_BUILD_TOOLS_VERSION 23.0.3
-ENV ANDROID_HOME /opt/android-sdk-linux
-ENV PATH ${PATH}:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools
-
-RUN cd /opt && \
-    wget ${ANDROID_SDK_URL} && \
+# Install Android SDK
+RUN mkdir -p /usr/local/opt && \
+    ln -s /usr/local/opt/android-sdk-linux /usr/local/opt/android-sdk && \
+    cd /usr/local/opt && \
+    curl -sSLO ${ANDROID_SDK_URL} && \
     tar -xzf ${ANDROID_SDK_FILENAME} && \
     rm ${ANDROID_SDK_FILENAME}
 
-ADD accept-licenses accept-licenses
+RUN ( sleep 5 && while [ 1 ]; do sleep 1; echo y; done ) | android update sdk --no-ui -a --filter tools,platform-tools,${ANDROID_API_LEVELS},build-tools-23.0.1,build-tools-${ANDROID_BUILD_TOOLS_VERSION},extra-android-m2repository,extra-google-m2repository,extra-google-google_play_services,extra-android-support
 
-RUN chmod +x accept-licenses
-
-RUN ./accept-licenses "android update sdk --no-ui -a --filter tools,platform-tools,${ANDROID_API_LEVELS},build-tools-23.0.1,build-tools-${ANDROID_BUILD_TOOLS_VERSION},extra-android-m2repository,extra-google-m2repository,extra-google-google_play_services,extra-android-support"
-
+# Install nodejs
 RUN set -ex \
     && for key in \
         9554F04D7259F04124DE6B476D5A82AC7E37093B \
@@ -52,17 +53,15 @@ RUN set -ex \
         C4F0DFFF4E8C1A8236409D08E73BC641CC11F4C8 \
     ; do \
         gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$key"; \
-    done
-
-ENV NPM_CONFIG_LOGLEVEL info
-ENV NODE_VERSION 6.4.0
-
-RUN curl -SLO "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.xz" \
-    && curl -SLO "https://nodejs.org/dist/v$NODE_VERSION/SHASUMS256.txt.asc" \
+    done && \
+    curl -sSLO "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.xz" \
+    && curl -sSLO "https://nodejs.org/dist/v$NODE_VERSION/SHASUMS256.txt.asc" \
     && gpg --batch --decrypt --output SHASUMS256.txt SHASUMS256.txt.asc \
     && grep " node-v$NODE_VERSION-linux-x64.tar.xz\$" SHASUMS256.txt | sha256sum -c - \
     && tar -xJf "node-v$NODE_VERSION-linux-x64.tar.xz" -C /usr/local --strip-components=1 \
     && rm "node-v$NODE_VERSION-linux-x64.tar.xz" SHASUMS256.txt.asc SHASUMS256.txt
+
+RUN npm install -g react-native-cli
 
 VOLUME [ "/app" ]
 WORKDIR [ "/app" ]
