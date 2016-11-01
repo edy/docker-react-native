@@ -25,6 +25,7 @@ RUN dpkg --add-architecture i386 && \
         libncurses5:i386 \
         libstdc++6:i386 \
         proguard \
+        lftp \
     && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get autoremove -y && \
