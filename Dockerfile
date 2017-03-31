@@ -17,7 +17,7 @@ ENV PATH=${PATH}:${ANDROID_NDK}
 
 # install system dependencies
 RUN apt-get update -y && \
-	apt-get install -y
+	apt-get install -y \
 		autoconf \
 		automake \
 		curl \
