@@ -1,47 +1,52 @@
-FROM openjdk:8-jdk
+FROM library/ubuntu:16.04
 
-ENV ANDROID_SDK_FILENAME android-sdk_r24.4.1-linux.tgz
-ENV ANDROID_SDK_URL http://dl.google.com/android/${ANDROID_SDK_FILENAME}
-ENV ANDROID_API_LEVELS android-25,android-24,android-23
-ENV ANDROID_BUILD_TOOLS_VERSION 23.0.3
-ENV ANDROID_HOME /usr/local/opt/android-sdk-linux
-ENV PATH ${PATH}:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools
+# https://github.com/facebook/react-native/blob/8c7b32d5f1da34613628b4b8e0474bc1e185a618/ContainerShip/Dockerfile.android-base
 
+# set default build arguments
+ARG ANDROID_VERSION=25.2.3
 ENV NPM_CONFIG_LOGLEVEL info
-ENV NODE_VERSION 6.9.1
+ENV NODE_VERSION 6.10.1
 
-RUN dpkg --add-architecture i386 && \
-    apt-get update -y && \
-    apt-get install -y \
-        expect \
-        lib32gcc1 \
-        lib32gomp1 \
-        lib32ncurses5 \
-        lib32stdc++6 \
-        lib32z1 \
-        lib32z1-dev \
-        libc6-i386 \
-        libc6:i386 \
-        libncurses5:i386 \
-        libstdc++6:i386 \
-        proguard \
-        lftp \
-    && \
-    rm -rf /var/lib/apt/lists/* && \
-    apt-get autoremove -y && \
-    apt-get clean
+# set default environment variables
+ENV ADB_INSTALL_TIMEOUT=10
+ENV PATH=${PATH}:/opt/buck/bin/
+ENV ANDROID_HOME=/opt/android
+ENV ANDROID_SDK_HOME=${ANDROID_HOME}
+ENV PATH=${PATH}:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools
+ENV PATH=${PATH}:${ANDROID_NDK}
 
-# Install Android SDK
-RUN mkdir -p /usr/local/opt && \
-    ln -s /usr/local/opt/android-sdk-linux /usr/local/opt/android-sdk && \
-    cd /usr/local/opt && \
-    curl -sSLO ${ANDROID_SDK_URL} && \
-    tar -xzf ${ANDROID_SDK_FILENAME} && \
-    rm ${ANDROID_SDK_FILENAME}
+# install system dependencies
+RUN apt-get update -y && \
+	apt-get install -y
+		ant \
+		autoconf \
+		automake \
+		curl \
+		g++ \
+		gcc \
+		git \
+		libqt5widgets5 \
+		lib32z1 \
+		lib32stdc++6 \
+		make \
+		maven \
+		npm \
+		openjdk-8* \
+		python-dev \
+		python3-dev \
+		qml-module-qtquick-controls \
+		qtdeclarative5-dev \
+		unzip \
+	&& \
+	rm -rf /var/lib/apt/lists/* && \
+	apt-get autoremove -y && \
+	apt-get clean
 
-RUN ( sleep 5 && while [ 1 ]; do sleep 1; echo y; done ) | android update sdk --no-ui -a --filter tools,platform-tools,${ANDROID_API_LEVELS},build-tools-23.0.1,build-tools-${ANDROID_BUILD_TOOLS_VERSION},extra-android-m2repository,extra-google-m2repository,extra-google-google_play_services,addon-google_apis-google-24,extra-android-support
+# configure npm
+RUN npm config set spin=false
+RUN npm config set progress=false
 
-# Install nodejs
+# install nodejs
 RUN set -ex \
     && for key in \
         9554F04D7259F04124DE6B476D5A82AC7E37093B \
@@ -63,6 +68,48 @@ RUN set -ex \
     && rm "node-v$NODE_VERSION-linux-x64.tar.xz" SHASUMS256.txt.asc SHASUMS256.txt
 
 RUN npm install -g react-native-cli
+
+# download and unpack android
+RUN mkdir /opt/android
+WORKDIR /opt/android
+RUN curl --silent https://dl.google.com/android/repository/tools_r$ANDROID_VERSION-linux.zip > android.zip && \
+	unzip android.zip && \
+	rm android.zip
+
+# Add android SDK tools
+
+# Android SDK Platform-tools, revision 25.0.4
+RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "Android SDK Platform-tools, revision 25.0.4" | awk '{ print $1 }' | sed 's/.$//')
+
+# Android SDK Build-tools, revision 23.0.1
+RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "Android SDK Build-tools, revision 23.0.1" | awk '{ print $1 }' | sed 's/.$//')
+
+# Android SDK Build-tools, revision 25.0.2
+RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "Android SDK Build-tools, revision 25.0.2" | awk '{ print $1 }' | sed 's/.$//')
+
+# SDK Platform Android 6.0, API 23, revision 3
+RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "SDK Platform Android 6.0, API 23" | awk '{ print $1 }' | sed 's/.$//')
+
+# SDK Platform Android 6.0, API 23, revision 3
+RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "SDK Platform Android 7.0, API 24" | awk '{ print $1 }' | sed 's/.$//')
+
+# SDK Platform Android 6.0, API 23, revision 3
+RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "SDK Platform Android 7.1.1, API 25" | awk '{ print $1 }' | sed 's/.$//')
+
+# Android Support Repository, revision 47
+RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "Android Support Repository, revision 47" | awk '{ print $1 }' | sed 's/.$//')
+
+# Google APIs, Android API 23, revision 1
+RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "Google APIs, Android API 24, revision 1" | awk '{ print $1 }' | sed 's/.$//')
+
+# Google Play services, revision 39
+RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "Google Play services, revision 39" | awk '{ print $1 }' | sed 's/.$//')
+
+# Google Repository, revision 46
+RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "Google Repository, revision 46" | awk '{ print $1 }' | sed 's/.$//')
+
+# Link adb executable
+RUN ln -s /opt/android/platform-tools/adb /usr/bin/adb
 
 VOLUME [ "/app" ]
 WORKDIR [ "/app" ]
