@@ -18,7 +18,6 @@ ENV PATH=${PATH}:${ANDROID_NDK}
 # install system dependencies
 RUN apt-get update -y && \
 	apt-get install -y
-		ant \
 		autoconf \
 		automake \
 		curl \
@@ -30,7 +29,6 @@ RUN apt-get update -y && \
 		lib32stdc++6 \
 		make \
 		maven \
-		npm \
 		openjdk-8* \
 		python-dev \
 		python3-dev \
@@ -110,6 +108,10 @@ RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "Google 
 
 # Link adb executable
 RUN ln -s /opt/android/platform-tools/adb /usr/bin/adb
+
+RUN mkdir -p $ANDROID_HOME/licenses/ \
+  && echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_HOME/licenses/android-sdk-license \
+  && echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license
 
 VOLUME [ "/app" ]
 WORKDIR [ "/app" ]
