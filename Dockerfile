@@ -13,13 +13,13 @@ ENV PATH=${PATH}:/opt/buck/bin/
 ENV ANDROID_HOME=/opt/android
 ENV ANDROID_SDK_HOME=${ANDROID_HOME}
 ENV PATH=${PATH}:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools
-ENV PATH=${PATH}:${ANDROID_NDK}
 
 # install system dependencies
 RUN apt-get update -y && \
 	apt-get install -y \
 		autoconf \
 		automake \
+		expect \
 		curl \
 		g++ \
 		gcc \
@@ -29,7 +29,7 @@ RUN apt-get update -y && \
 		lib32stdc++6 \
 		make \
 		maven \
-		openjdk-8* \
+		openjdk-8-jdk \
 		python-dev \
 		python3-dev \
 		qml-module-qtquick-controls \
@@ -72,50 +72,35 @@ RUN npm config set progress=false
 RUN npm install -g react-native-cli
 
 # download and unpack android
-RUN mkdir /opt/android
+RUN mkdir -p /opt/android && mkdir -p /opt/tools
 WORKDIR /opt/android
 RUN curl --silent https://dl.google.com/android/repository/tools_r$ANDROID_VERSION-linux.zip > android.zip && \
 	unzip android.zip && \
 	rm android.zip
 
-# Add android SDK tools
-
-# Android SDK Platform-tools, revision 25.0.4
-RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "Android SDK Platform-tools, revision 25.0.4" | awk '{ print $1 }' | sed 's/.$//')
-
-# Android SDK Build-tools, revision 23.0.1
-RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "Android SDK Build-tools, revision 23.0.1" | awk '{ print $1 }' | sed 's/.$//')
-
-# Android SDK Build-tools, revision 25.0.2
-RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "Android SDK Build-tools, revision 25.0.2" | awk '{ print $1 }' | sed 's/.$//')
-
-# SDK Platform Android 6.0, API 23, revision 3
-RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "SDK Platform Android 6.0, API 23" | awk '{ print $1 }' | sed 's/.$//')
-
-# SDK Platform Android 6.0, API 23, revision 3
-RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "SDK Platform Android 7.0, API 24" | awk '{ print $1 }' | sed 's/.$//')
-
-# SDK Platform Android 6.0, API 23, revision 3
-RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "SDK Platform Android 7.1.1, API 25" | awk '{ print $1 }' | sed 's/.$//')
-
-# Android Support Repository, revision 47
-RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "Android Support Repository, revision 47" | awk '{ print $1 }' | sed 's/.$//')
-
-# Google APIs, Android API 23, revision 1
-RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "Google APIs, Android API 24, revision 1" | awk '{ print $1 }' | sed 's/.$//')
-
-# Google Play services, revision 39
-RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "Google Play services, revision 39" | awk '{ print $1 }' | sed 's/.$//')
-
-# Google Repository, revision 46
-RUN echo "y" | android update sdk -u -a -t $(android list sdk -a | grep "Google Repository, revision 46" | awk '{ print $1 }' | sed 's/.$//')
-
-# Link adb executable
-RUN ln -s /opt/android/platform-tools/adb /usr/bin/adb
+# copy tools folder
+COPY tools/android-accept-licenses.sh /opt/tools/android-accept-licenses.sh
+ENV PATH ${PATH}:/opt/tools
 
 RUN mkdir -p $ANDROID_HOME/licenses/ \
-  && echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_HOME/licenses/android-sdk-license \
-  && echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license
+	&& echo "d56f5187479451eabf01fb78af6dfcb131a6481e" > $ANDROID_HOME/licenses/android-sdk-license \
+	&& echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license
 
-VOLUME [ "/app" ]
-WORKDIR [ "/app" ]
+# sdk
+RUN /opt/tools/android-accept-licenses.sh "$ANDROID_HOME/tools/bin/sdkmanager \
+	tools \
+	\"platform-tools\" \
+	\"build-tools;23.0.1\" \
+	\"build-tools;23.0.3\" \
+	\"build-tools;25.0.1\" \
+	\"build-tools;25.0.2\" \
+	\"platforms;android-23\" \
+	\"platforms;android-25\" \
+	\"extras;android;m2repository\" \
+	\"extras;google;m2repository\" \
+	\"add-ons;addon-google_apis-google-24\" \
+	\"extras;google;google_play_services\"" \
+	&& $ANDROID_HOME/tools/bin/sdkmanager --update
+
+VOLUME ["/app"]
+WORKDIR /app
