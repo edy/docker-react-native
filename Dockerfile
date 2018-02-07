@@ -39,10 +39,15 @@ RUN apt-get update -y && \
 		qtdeclarative5-dev \
 		unzip \
 		xz-utils \
+		locales \
 	&& \
 	rm -rf /var/lib/apt/lists/* && \
 	apt-get autoremove -y && \
 	apt-get clean
+
+# fix crashing gradle because of non ascii characters in ENV variables: https://github.com/gradle/gradle/issues/3117
+RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
+ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 
 # install nodejs
 # https://github.com/nodejs/docker-node/blob/a5141d841167d109bcad542c9fb636607dabc8b1/6.10/Dockerfile
