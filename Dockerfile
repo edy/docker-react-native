@@ -44,8 +44,7 @@ RUN apt-get update -y && \
 	rm -rf /var/lib/apt/lists/* && \
 	apt-get autoremove -y && \
 	apt-get clean && \
-	echo fs.inotify.max_user_watches=524288 | tee -a /etc/sysctl.conf && sysctl -p && \
-	echo 65536 | tee -a /proc/sys/fs/inotify/max_user_watches
+	echo fs.inotify.max_user_watches=524288 | tee -a /etc/sysctl.conf && sysctl -p --system
 
 # fix crashing gradle because of non ascii characters in ENV variables: https://github.com/gradle/gradle/issues/3117
 RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
