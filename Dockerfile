@@ -5,7 +5,7 @@ FROM library/ubuntu:16.04
 # set default build arguments
 ARG ANDROID_TOOLS_VERSION=25.2.5
 ENV NPM_CONFIG_LOGLEVEL info
-ARG NODE_VERSION=9.5.0
+ARG NODE_VERSION=10.12.0
 
 
 # set default environment variables
